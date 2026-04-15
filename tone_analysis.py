@@ -119,8 +119,8 @@ class ToneAnalyzer:
         )
 
     def _calc_peak_position(self, hist: np.ndarray) -> float:
-        """Calculate peak position using weighted average."""
-        return float(np.sum(np.arange(256) * hist) / np.sum(hist))
+        """Calculate peak position (histogram maximum position)."""
+        return float(np.argmax(hist))
 
     def _classify_tone(self, peak: float, min_val: int, max_val: int,
                        shadows: float, highlights: float,
