@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tone-analysis"
+version = "1.0.0"
+description = "Image tone classification library based on histogram analysis"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "青山公仔", email = "qingshangongzai@163.com"},
+]
+keywords = ["image", "tone", "histogram", "photography", "classification"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+pil = ["Pillow>=8.0.0"]
+dev = ["pytest>=7.0.0", "matplotlib>=3.0.0"]
+
+[project.urls]
+Homepage = "https://github.com/qingshangongzai/tone-analysis"
+Repository = "https://github.com/qingshangongzai/tone-analysis"
+Issues = "https://github.com/qingshangongzai/tone-analysis/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
