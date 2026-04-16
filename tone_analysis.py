@@ -44,6 +44,8 @@ class ToneAnalysisResult:
     tone_range: ToneRange
     histogram: np.ndarray
     peak_position: float
+    tone_key_confidence: float
+    tone_range_confidence: float
 
 
 class ToneAnalyzer:
@@ -75,6 +77,10 @@ class ToneAnalyzer:
     MAX_RANGE_THRESHOLD = 225
     U_SHAPE_RATIO = 0.7
 
+    # Boundary buffers for confidence calculation
+    KEY_BUFFER = 15  # Buffer for key classification boundaries
+    RANGE_BUFFER = 20  # Buffer for range classification boundaries
+
     def analyze(self, image: np.ndarray) -> ToneAnalysisResult:
         """
         Analyze image tone.
@@ -103,7 +109,7 @@ class ToneAnalyzer:
         hist, _ = np.histogram(gray, bins=256, range=(0, 256))
         peak_position = self._calc_peak_position(hist)
 
-        tone_key, tone_range = self._classify_tone(
+        tone_key, tone_range, key_confidence, range_confidence = self._classify_tone(
             peak_position, min_val, max_val, shadows, highlights, hist
         )
 
@@ -115,7 +121,9 @@ class ToneAnalyzer:
             tone_key=tone_key,
             tone_range=tone_range,
             histogram=hist,
-            peak_position=peak_position
+            peak_position=peak_position,
+            tone_key_confidence=key_confidence,
+            tone_range_confidence=range_confidence
         )
 
     def _calc_peak_position(self, hist: np.ndarray) -> float:
@@ -124,26 +132,29 @@ class ToneAnalyzer:
 
     def _classify_tone(self, peak: float, min_val: int, max_val: int,
                        shadows: float, highlights: float,
-                       hist: np.ndarray) -> Tuple[ToneKey, ToneRange]:
+                       hist: np.ndarray) -> Tuple[ToneKey, ToneRange, float, float]:
         """
         Classify tone based on histogram characteristics.
 
         First checks for full-tone (U-shaped distribution),
-        then classifies by peak position and spread.
+        then classifies by peak position and spread with confidence scores.
+
+        Returns:
+            Tuple of (tone_key, tone_range, key_confidence, range_confidence)
         """
         spread = max_val - min_val
 
         # Check for full-tone (U-shaped distribution)
         if self._is_full_tone(hist, shadows, highlights, min_val, max_val):
-            return ToneKey.FULL, ToneRange.LONG
+            return ToneKey.FULL, ToneRange.LONG, 1.0, 1.0
 
-        # Classify by peak position
-        tone_key = self._get_tone_key(peak)
+        # Classify by peak position (with confidence)
+        tone_key, key_confidence = self._get_tone_key(peak)
 
-        # Classify by spread
-        tone_range = self._get_tone_range(spread)
+        # Classify by spread (with confidence)
+        tone_range, range_confidence = self._get_tone_range(spread)
 
-        return tone_key, tone_range
+        return tone_key, tone_range, key_confidence, range_confidence
 
     def _is_full_tone(self, hist: np.ndarray, shadows: float,
                       highlights: float, min_val: int, max_val: int) -> bool:
@@ -165,22 +176,79 @@ class ToneAnalyzer:
 
         return has_shadows and has_highlights and full_range and (mid_avg < edge_avg * self.U_SHAPE_RATIO)
 
-    def _get_tone_key(self, peak: float) -> ToneKey:
-        """Determine tone key from peak position."""
-        if peak >= self.KEY_HIGH_MIN:
-            return ToneKey.HIGH
-        elif peak <= self.KEY_LOW_MAX:
-            return ToneKey.LOW
-        else:
-            return ToneKey.MID
+    def _get_tone_key(self, peak: float) -> Tuple[ToneKey, float]:
+        """Determine tone key from peak position with confidence score.
 
-    def _get_tone_range(self, spread: int) -> ToneRange:
-        """Determine tone range from brightness spread."""
+        Args:
+            peak: Peak position in histogram (0-255)
+
+        Returns:
+            Tuple of (tone_key, confidence) where confidence is 0.5-1.0
+        """
+        # High key region
+        if peak >= self.KEY_HIGH_MIN:
+            distance = peak - self.KEY_HIGH_MIN
+            confidence = 0.5 + 0.5 * min(distance / self.KEY_BUFFER, 1.0)
+            return ToneKey.HIGH, confidence
+
+        # Low key region
+        if peak <= self.KEY_LOW_MAX:
+            distance = self.KEY_LOW_MAX - peak
+            confidence = 0.5 + 0.5 * min(distance / self.KEY_BUFFER, 1.0)
+            return ToneKey.LOW, confidence
+
+        # Mid key region
+        dist_to_low = peak - self.KEY_LOW_MAX
+        dist_to_high = self.KEY_HIGH_MIN - peak
+
+        if dist_to_low < self.KEY_BUFFER and dist_to_low < dist_to_high:
+            # Near low boundary
+            confidence = 0.5 + 0.5 * (dist_to_low / self.KEY_BUFFER)
+        elif dist_to_high < self.KEY_BUFFER:
+            # Near high boundary
+            confidence = 0.5 + 0.5 * (dist_to_high / self.KEY_BUFFER)
+        else:
+            # Core mid region
+            confidence = 1.0
+
+        return ToneKey.MID, confidence
+
+    def _get_tone_range(self, spread: int) -> Tuple[ToneRange, float]:
+        """Determine tone range from brightness spread with confidence score.
+
+        Args:
+            spread: Brightness spread (max - min)
+
+        Returns:
+            Tuple of (tone_range, confidence) where confidence is 0.5-1.0
+        """
+        # Long range region
         if spread >= self.RANGE_LONG:
-            return ToneRange.LONG
-        elif spread >= self.RANGE_MEDIUM:
-            return ToneRange.MEDIUM
-        return ToneRange.SHORT
+            distance = spread - self.RANGE_LONG
+            confidence = 0.5 + 0.5 * min(distance / self.RANGE_BUFFER, 1.0)
+            return ToneRange.LONG, confidence
+
+        # Short range region
+        if spread < self.RANGE_MEDIUM:
+            distance = self.RANGE_MEDIUM - spread
+            confidence = 0.5 + 0.5 * min(distance / self.RANGE_BUFFER, 1.0)
+            return ToneRange.SHORT, confidence
+
+        # Medium range region
+        dist_to_short = spread - self.RANGE_MEDIUM
+        dist_to_long = self.RANGE_LONG - spread
+
+        if dist_to_short < self.RANGE_BUFFER and dist_to_short < dist_to_long:
+            # Near short boundary
+            confidence = 0.5 + 0.5 * (dist_to_short / self.RANGE_BUFFER)
+        elif dist_to_long < self.RANGE_BUFFER:
+            # Near long boundary
+            confidence = 0.5 + 0.5 * (dist_to_long / self.RANGE_BUFFER)
+        else:
+            # Core medium region
+            confidence = 1.0
+
+        return ToneRange.MEDIUM, confidence
 
     def _rgb_to_gray(self, image: np.ndarray) -> np.ndarray:
         """Convert RGB to grayscale using Rec. 709 standard."""
