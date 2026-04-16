@@ -1,1 +1,1 @@
-"""Examples for tone_analysis library."""
+"""tone_analysis库的示例。"""

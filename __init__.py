@@ -1,7 +1,7 @@
 """
-Tone Analysis - Image Tone Classification Library
+影调分析 - 图像影调分类库
 
-MIT License
+MIT许可证
 """
 
 from .tone_analysis import (

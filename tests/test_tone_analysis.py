@@ -1,5 +1,5 @@
 """
-Tests for tone_analysis library.
+tone_analysis库的测试。
 """
 
 import numpy as np
@@ -8,7 +8,7 @@ import pytest
 from tone_analysis import ToneAnalyzer, ToneKey, ToneRange, get_tone_name
 
 
-# Test constants
+# 测试常量
 BRIGHT_VALUE = 200
 DARK_VALUE = 50
 MID_VALUE = 128
@@ -23,14 +23,14 @@ IMAGE_SIZE = (100, 100)
 
 
 class TestToneAnalyzer:
-    """Test cases for ToneAnalyzer class."""
+    """ToneAnalyzer类的测试用例。"""
 
     def setup_method(self):
-        """Set up test fixtures."""
+        """设置测试夹具。"""
         self.analyzer = ToneAnalyzer()
 
     def test_high_key_detection(self):
-        """Test high-key image detection."""
+        """测试高调图像检测。"""
         bright_img = np.ones((*IMAGE_SIZE, 3), dtype=np.uint8) * BRIGHT_VALUE
         result = self.analyzer.analyze(bright_img)
 
@@ -38,7 +38,7 @@ class TestToneAnalyzer:
         assert result.mean > HIGH_KEY_THRESHOLD
 
     def test_low_key_detection(self):
-        """Test low-key image detection."""
+        """测试低调图像检测。"""
         dark_img = np.ones((*IMAGE_SIZE, 3), dtype=np.uint8) * DARK_VALUE
         result = self.analyzer.analyze(dark_img)
 
@@ -46,14 +46,14 @@ class TestToneAnalyzer:
         assert result.mean < LOW_KEY_THRESHOLD
 
     def test_mid_key_detection(self):
-        """Test mid-key image detection."""
+        """测试中调图像检测。"""
         mid_img = np.ones((*IMAGE_SIZE, 3), dtype=np.uint8) * MID_VALUE
         result = self.analyzer.analyze(mid_img)
 
         assert result.tone_key == ToneKey.MID
 
     def test_long_range_detection(self):
-        """Test long range (high contrast) detection."""
+        """测试长调（高对比度）检测。"""
         img = np.zeros((*IMAGE_SIZE, 3), dtype=np.uint8)
         img[:50, :] = 255
 
@@ -63,7 +63,7 @@ class TestToneAnalyzer:
         assert result.max_val - result.min_val >= LONG_RANGE_THRESHOLD
 
     def test_short_range_detection(self):
-        """Test short range (low contrast) detection."""
+        """测试短调（低对比度）检测。"""
         narrow_img = np.ones((*IMAGE_SIZE, 3), dtype=np.uint8) * MID_VALUE
         result = self.analyzer.analyze(narrow_img)
 
@@ -71,7 +71,7 @@ class TestToneAnalyzer:
         assert result.std < SHORT_RANGE_STD_THRESHOLD
 
     def test_zone_calculation(self):
-        """Test shadow/midtone/highlight zone calculation."""
+        """测试暗部/中调/亮部区域计算。"""
         highlight_img = np.ones((*IMAGE_SIZE, 3), dtype=np.uint8) * 220
         result = self.analyzer.analyze(highlight_img)
 
@@ -79,7 +79,7 @@ class TestToneAnalyzer:
         assert result.shadows < SHADOW_MINIMAL_THRESHOLD
 
     def test_histogram_shape(self):
-        """Test histogram has correct shape."""
+        """测试直方图形状正确。"""
         img = np.random.randint(0, 256, (*IMAGE_SIZE, 3), dtype=np.uint8)
         result = self.analyzer.analyze(img)
 
@@ -87,14 +87,14 @@ class TestToneAnalyzer:
         assert np.sum(result.histogram) == IMAGE_SIZE[0] * IMAGE_SIZE[1]
 
     def test_peak_position_calculation(self):
-        """Test peak position calculation."""
+        """测试峰值位置计算。"""
         img = np.ones((*IMAGE_SIZE, 3), dtype=np.uint8) * MID_VALUE
         result = self.analyzer.analyze(img)
 
         assert abs(result.peak_position - MID_VALUE) <= 1
 
     def test_full_tone_detection(self):
-        """Test full-tone (U-shaped) detection."""
+        """测试全调（U型）检测。"""
         img = np.zeros((*IMAGE_SIZE, 3), dtype=np.uint8)
         img[:25, :25] = 255
         img[75:, 75:] = 0
@@ -107,10 +107,10 @@ class TestToneAnalyzer:
 
 
 class TestHelperFunctions:
-    """Test helper functions."""
+    """辅助函数测试。"""
 
     def test_get_tone_name(self):
-        """Test tone name generation."""
+        """测试影调名称生成。"""
         assert get_tone_name(ToneKey.HIGH, ToneRange.LONG) == "High-Long"
         assert get_tone_name(ToneKey.MID, ToneRange.MEDIUM) == "Mid-Medium"
         assert get_tone_name(ToneKey.LOW, ToneRange.SHORT) == "Low-Short"
@@ -118,14 +118,14 @@ class TestHelperFunctions:
 
 
 class TestEdgeCases:
-    """Test edge cases and error handling."""
+    """边界情况和错误处理测试。"""
 
     def setup_method(self):
-        """Set up test fixtures."""
+        """设置测试夹具。"""
         self.analyzer = ToneAnalyzer()
 
     def test_empty_image(self):
-        """Test with uniform image."""
+        """测试均匀图像。"""
         img = np.zeros((10, 10, 3), dtype=np.uint8)
         result = self.analyzer.analyze(img)
 
@@ -134,7 +134,7 @@ class TestEdgeCases:
         assert result.std == 0
 
     def test_full_range_image(self):
-        """Test with full 0-255 range image."""
+        """测试完整0-255范围图像。"""
         img = np.random.randint(0, 256, (*IMAGE_SIZE, 3), dtype=np.uint8)
         result = self.analyzer.analyze(img)
 
@@ -143,7 +143,7 @@ class TestEdgeCases:
         assert 0 <= result.mean <= 255
 
     def test_single_color_image(self):
-        """Test with single color image."""
+        """测试单色图像。"""
         img = np.full((50, 50, 3), 100, dtype=np.uint8)
         result = self.analyzer.analyze(img)
 
@@ -152,15 +152,15 @@ class TestEdgeCases:
         assert result.tone_range == ToneRange.SHORT
 
     def test_invalid_image_shape(self):
-        """Test with invalid image shape raises ValueError."""
-        # Grayscale image (should be RGB)
+        """测试无效图像形状引发ValueError。"""
+        # 灰度图像（应为RGB）
         gray_img = np.ones((100, 100), dtype=np.uint8)
-        with pytest.raises(ValueError, match="Expected RGB image"):
+        with pytest.raises(ValueError, match="期望RGB图像"):
             self.analyzer.analyze(gray_img)
 
-        # Wrong number of channels
+        # 通道数错误
         rgba_img = np.ones((100, 100, 4), dtype=np.uint8)
-        with pytest.raises(ValueError, match="Expected RGB image"):
+        with pytest.raises(ValueError, match="期望RGB图像"):
             self.analyzer.analyze(rgba_img)
 
 

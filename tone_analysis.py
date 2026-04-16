@@ -1,10 +1,10 @@
 """
-Tone Analysis - Image Tone Classification Library
+影调分析 - 图像影调分类库
 
-A Python library for analyzing image tone based on histogram analysis.
-Uses two-dimensional classification: peak position (key) and distribution spread (range).
+基于直方图分析的图像影调分析Python库。
+使用二维分类法：峰值位置（调性）和分布范围（反差）。
 
-MIT License
+MIT许可证
 """
 
 from dataclasses import dataclass
@@ -15,7 +15,7 @@ import numpy as np
 
 
 class ToneKey(str, Enum):
-    """Tone key (brightness distribution)"""
+    """影调调性（亮度分布）"""
     HIGH = "high"
     MID = "mid"
     LOW = "low"
@@ -23,7 +23,7 @@ class ToneKey(str, Enum):
 
 
 class ToneRange(str, Enum):
-    """Tone range (contrast/spread)"""
+    """影调范围（对比度/分布）"""
     LONG = "long"
     MEDIUM = "medium"
     SHORT = "short"
@@ -31,7 +31,7 @@ class ToneRange(str, Enum):
 
 @dataclass
 class ToneAnalysisResult:
-    """Result of tone analysis"""
+    """影调分析结果"""
     mean: float
     median: float
     std: float
@@ -50,49 +50,49 @@ class ToneAnalysisResult:
 
 class ToneAnalyzer:
     """
-    Image tone analyzer based on histogram analysis.
+    基于直方图分析的图像影调分析器。
 
-    Classifies images into 10 tone types:
-    - High-Long, High-Medium, High-Short
-    - Mid-Long, Mid-Medium, Mid-Short
-    - Low-Long, Low-Medium, Low-Short
-    - Full-Long (special case)
+    将图像分为10种影调类型：
+    - 高调长调、高调中调、高调短调
+    - 中调长调、中调中调、中调短调
+    - 低调长调、低调中调、低调短调
+    - 全调长调（特殊情况）
 
-    Based on two dimensions:
-    1. Peak position: Determines key (high/mid/low)
-    2. Distribution spread: Determines range (long/medium/short)
+    基于两个维度：
+    1. 峰值位置：决定调性（高调/中调/低调）
+    2. 分布范围：决定反差（长调/中调/短调）
     """
 
-    # Thresholds for key classification
+    # 调性分类阈值
     KEY_HIGH_MIN = 160
     KEY_LOW_MAX = 96
 
-    # Thresholds for range classification
+    # 反差分类阈值
     RANGE_LONG = 180
     RANGE_MEDIUM = 100
 
-    # Thresholds for full-tone detection
+    # 全调检测阈值
     MIN_ZONE_PERCENTAGE = 15
     MIN_RANGE_THRESHOLD = 30
     MAX_RANGE_THRESHOLD = 225
     U_SHAPE_RATIO = 0.7
 
-    # Boundary buffers for confidence calculation
-    KEY_BUFFER = 15  # Buffer for key classification boundaries
-    RANGE_BUFFER = 20  # Buffer for range classification boundaries
+    # 边界缓冲值（用于置信度计算）
+    KEY_BUFFER = 15  # 调性分类边界缓冲
+    RANGE_BUFFER = 20  # 反差分类边界缓冲
 
     def analyze(self, image: np.ndarray) -> ToneAnalysisResult:
         """
-        Analyze image tone.
+        分析图像影调。
 
-        Args:
-            image: RGB image array (H, W, 3) with values 0-255
+        参数:
+            image: RGB图像数组 (H, W, 3)，数值范围0-255
 
-        Returns:
-            ToneAnalysisResult with tone classification and statistics
+        返回:
+            ToneAnalysisResult，包含影调分类和统计信息
         """
         if image.ndim != 3 or image.shape[2] != 3:
-            raise ValueError(f"Expected RGB image with shape (H, W, 3), got {image.shape}")
+            raise ValueError(f"期望RGB图像形状为 (H, W, 3)，实际得到 {image.shape}")
 
         gray = self._rgb_to_gray(image)
 
@@ -127,31 +127,31 @@ class ToneAnalyzer:
         )
 
     def _calc_peak_position(self, hist: np.ndarray) -> float:
-        """Calculate peak position (histogram maximum position)."""
+        """计算峰值位置（直方图最大值位置）。"""
         return float(np.argmax(hist))
 
     def _classify_tone(self, peak: float, min_val: int, max_val: int,
                        shadows: float, highlights: float,
                        hist: np.ndarray) -> Tuple[ToneKey, ToneRange, float, float]:
         """
-        Classify tone based on histogram characteristics.
+        基于直方图特征进行影调分类。
 
-        First checks for full-tone (U-shaped distribution),
-        then classifies by peak position and spread with confidence scores.
+        首先检测全调（U型分布），
+        然后根据峰值位置和分布范围进行分类，并计算置信度。
 
-        Returns:
-            Tuple of (tone_key, tone_range, key_confidence, range_confidence)
+        返回:
+            元组 (tone_key, tone_range, key_confidence, range_confidence)
         """
         spread = max_val - min_val
 
-        # Check for full-tone (U-shaped distribution)
+        # 检测全调（U型分布）
         if self._is_full_tone(hist, shadows, highlights, min_val, max_val):
             return ToneKey.FULL, ToneRange.LONG, 1.0, 1.0
 
-        # Classify by peak position (with confidence)
+        # 根据峰值位置分类（含置信度）
         tone_key, key_confidence = self._get_tone_key(peak)
 
-        # Classify by spread (with confidence)
+        # 根据分布范围分类（含置信度）
         tone_range, range_confidence = self._get_tone_range(spread)
 
         return tone_key, tone_range, key_confidence, range_confidence
@@ -159,106 +159,106 @@ class ToneAnalyzer:
     def _is_full_tone(self, hist: np.ndarray, shadows: float,
                       highlights: float, min_val: int, max_val: int) -> bool:
         """
-        Detect full-tone images (U-shaped histogram).
+        检测全调图像（U型直方图）。
 
-        Characteristics:
-        - Significant pixels in both shadows and highlights
-        - Full brightness range (near 0 to near 255)
-        - Middle region has fewer pixels than edges
+        特征：
+        - 暗部和亮部都有显著像素
+        - 完整的亮度范围（接近0到接近255）
+        - 中间区域像素少于边缘区域
         """
         has_shadows = shadows > self.MIN_ZONE_PERCENTAGE
         has_highlights = highlights > self.MIN_ZONE_PERCENTAGE
         full_range = (min_val < self.MIN_RANGE_THRESHOLD) and (max_val > self.MAX_RANGE_THRESHOLD)
 
-        # U-shape detection: edges have more pixels than middle
+        # U型检测：边缘像素多于中间
         mid_avg = np.mean(hist[64:192])
         edge_avg = np.mean(np.concatenate([hist[:32], hist[224:]]))
 
         return has_shadows and has_highlights and full_range and (mid_avg < edge_avg * self.U_SHAPE_RATIO)
 
     def _get_tone_key(self, peak: float) -> Tuple[ToneKey, float]:
-        """Determine tone key from peak position with confidence score.
+        """根据峰值位置确定影调调性，并返回置信度。
 
-        Args:
-            peak: Peak position in histogram (0-255)
+        参数:
+            peak: 直方图峰值位置 (0-255)
 
-        Returns:
-            Tuple of (tone_key, confidence) where confidence is 0.5-1.0
+        返回:
+            元组 (tone_key, confidence)，置信度范围为0.5-1.0
         """
-        # High key region
+        # 高调区域
         if peak >= self.KEY_HIGH_MIN:
             distance = peak - self.KEY_HIGH_MIN
             confidence = 0.5 + 0.5 * min(distance / self.KEY_BUFFER, 1.0)
             return ToneKey.HIGH, confidence
 
-        # Low key region
+        # 低调区域
         if peak <= self.KEY_LOW_MAX:
             distance = self.KEY_LOW_MAX - peak
             confidence = 0.5 + 0.5 * min(distance / self.KEY_BUFFER, 1.0)
             return ToneKey.LOW, confidence
 
-        # Mid key region
+        # 中调区域
         dist_to_low = peak - self.KEY_LOW_MAX
         dist_to_high = self.KEY_HIGH_MIN - peak
 
         if dist_to_low < self.KEY_BUFFER and dist_to_low < dist_to_high:
-            # Near low boundary
+            # 接近低调边界
             confidence = 0.5 + 0.5 * (dist_to_low / self.KEY_BUFFER)
         elif dist_to_high < self.KEY_BUFFER:
-            # Near high boundary
+            # 接近高调边界
             confidence = 0.5 + 0.5 * (dist_to_high / self.KEY_BUFFER)
         else:
-            # Core mid region
+            # 核心中调区域
             confidence = 1.0
 
         return ToneKey.MID, confidence
 
     def _get_tone_range(self, spread: int) -> Tuple[ToneRange, float]:
-        """Determine tone range from brightness spread with confidence score.
+        """根据亮度分布范围确定影调反差，并返回置信度。
 
-        Args:
-            spread: Brightness spread (max - min)
+        参数:
+            spread: 亮度分布范围 (最大值 - 最小值)
 
-        Returns:
-            Tuple of (tone_range, confidence) where confidence is 0.5-1.0
+        返回:
+            元组 (tone_range, confidence)，置信度范围为0.5-1.0
         """
-        # Long range region
+        # 长调区域
         if spread >= self.RANGE_LONG:
             distance = spread - self.RANGE_LONG
             confidence = 0.5 + 0.5 * min(distance / self.RANGE_BUFFER, 1.0)
             return ToneRange.LONG, confidence
 
-        # Short range region
+        # 短调区域
         if spread < self.RANGE_MEDIUM:
             distance = self.RANGE_MEDIUM - spread
             confidence = 0.5 + 0.5 * min(distance / self.RANGE_BUFFER, 1.0)
             return ToneRange.SHORT, confidence
 
-        # Medium range region
+        # 中调区域
         dist_to_short = spread - self.RANGE_MEDIUM
         dist_to_long = self.RANGE_LONG - spread
 
         if dist_to_short < self.RANGE_BUFFER and dist_to_short < dist_to_long:
-            # Near short boundary
+            # 接近短调边界
             confidence = 0.5 + 0.5 * (dist_to_short / self.RANGE_BUFFER)
         elif dist_to_long < self.RANGE_BUFFER:
-            # Near long boundary
+            # 接近长调边界
             confidence = 0.5 + 0.5 * (dist_to_long / self.RANGE_BUFFER)
         else:
-            # Core medium region
+            # 核心中调区域
             confidence = 1.0
 
         return ToneRange.MEDIUM, confidence
 
     def _rgb_to_gray(self, image: np.ndarray) -> np.ndarray:
-        """Convert RGB to grayscale using Rec. 709 standard."""
+        """使用Rec. 709标准将RGB转换为灰度图。"""
         return (0.299 * image[:, :, 0] +
                 0.587 * image[:, :, 1] +
                 0.114 * image[:, :, 2]).astype(np.uint8)
 
 
 def get_tone_name(key: ToneKey, range_type: ToneRange) -> str:
-    """Get human-readable tone name."""
+    """获取可读性影调名称。"""
     if key == ToneKey.FULL:
         return "Full-Long"
     return f"{key.value.title()}-{range_type.value.title()}"
@@ -266,12 +266,12 @@ def get_tone_name(key: ToneKey, range_type: ToneRange) -> str:
 
 def analyze_image(image_path: str) -> ToneAnalysisResult:
     """
-    Convenience function to analyze an image file.
+    分析图像文件的便捷函数。
 
-    Args:
-        image_path: Path to image file
+    参数:
+        image_path: 图像文件路径
 
-    Returns:
+    返回:
         ToneAnalysisResult
     """
     from PIL import Image

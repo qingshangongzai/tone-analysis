@@ -1,5 +1,5 @@
 """
-Basic usage example for tone_analysis library.
+tone_analysis库的基本使用示例。
 """
 
 import numpy as np
@@ -9,71 +9,71 @@ from tone_analysis import ToneAnalyzer, analyze_image, get_tone_name
 
 
 def example_1_analyze_file():
-    """Example 1: Analyze an image file."""
+    """示例1：分析图像文件。"""
     print("=" * 50)
-    print("Example 1: Analyze Image File")
+    print("示例1：分析图像文件")
     print("=" * 50)
 
-    # Replace with your image path
+    # 替换为您的图像路径
     image_path = "sample_image.jpg"
 
     try:
         result = analyze_image(image_path)
 
-        print(f"Tone: {get_tone_name(result.tone_key, result.tone_range)}")
-        print(f"Mean brightness: {result.mean:.1f}")
-        print(f"Median: {result.median:.1f}")
-        print(f"Standard deviation: {result.std:.1f}")
-        print(f"Range: {result.min_val} - {result.max_val}")
-        print(f"\nZone distribution:")
-        print(f"  Shadows:   {result.shadows:>6.2f}%")
-        print(f"  Midtones:  {result.midtones:>6.2f}%")
-        print(f"  Highlights:{result.highlights:>6.2f}%")
+        print(f"影调: {get_tone_name(result.tone_key, result.tone_range)}")
+        print(f"平均亮度: {result.mean:.1f}")
+        print(f"中位数: {result.median:.1f}")
+        print(f"标准差: {result.std:.1f}")
+        print(f"范围: {result.min_val} - {result.max_val}")
+        print(f"\n区域分布:")
+        print(f"  暗部:   {result.shadows:>6.2f}%")
+        print(f"  中调:  {result.midtones:>6.2f}%")
+        print(f"  亮部:{result.highlights:>6.2f}%")
 
     except FileNotFoundError:
-        print(f"Image not found: {image_path}")
-        print("Please provide a valid image path.")
+        print(f"图像未找到: {image_path}")
+        print("请提供有效的图像路径。")
 
 
 def example_2_analyze_array():
-    """Example 2: Analyze a numpy array directly."""
+    """示例2：直接分析numpy数组。"""
     print("\n" + "=" * 50)
-    print("Example 2: Analyze Numpy Array")
+    print("示例2：分析Numpy数组")
     print("=" * 50)
 
-    # Create a sample image (bright, high-key)
+    # 创建示例图像（明亮，高调）
     bright_image = np.ones((100, 100, 3), dtype=np.uint8) * 200
 
     analyzer = ToneAnalyzer()
     result = analyzer.analyze(bright_image)
 
-    print(f"Tone: {get_tone_name(result.tone_key, result.tone_range)}")
-    print(f"Mean brightness: {result.mean:.1f}")
+    print(f"影调: {get_tone_name(result.tone_key, result.tone_range)}")
+    print(f"平均亮度: {result.mean:.1f}")
 
-    # Create a dark image (low-key)
+    # 创建暗调图像（低调）
     dark_image = np.ones((100, 100, 3), dtype=np.uint8) * 50
     result = analyzer.analyze(dark_image)
 
-    print(f"\nDark image tone: {get_tone_name(result.tone_key, result.tone_range)}")
-    print(f"Mean brightness: {result.mean:.1f}")
+    print(f"\n暗调图像影调: {get_tone_name(result.tone_key, result.tone_range)}")
+    print(f"平均亮度: {result.mean:.1f}")
 
 
 def example_3_batch_analysis():
-    """Example 3: Batch analyze multiple images."""
+    """示例3：批量分析多张图像。"""
     print("\n" + "=" * 50)
-    print("Example 3: Batch Analysis")
+    print("示例3：批量分析")
     print("=" * 50)
 
-    # Generate sample images with different tones
+    # 生成不同影调的示例图像
     images = {
-        "Bright": np.ones((100, 100, 3), dtype=np.uint8) * 220,
-        "Dark": np.ones((100, 100, 3), dtype=np.uint8) * 40,
-        "Mid": np.ones((100, 100, 3), dtype=np.uint8) * 128,
+        "明亮": np.ones((100, 100, 3), dtype=np.uint8) * 220,
+        "暗调": np.ones((100, 100, 3), dtype=np.uint8) * 40,
+        "中调": np.ones((100, 100, 3), dtype=np.uint8) * 128,
     }
 
     analyzer = ToneAnalyzer()
 
-    print(f"{'Image':<10} {'Tone':<15} {'Mean':<8} {'Std':<8}")
+    print(f"{'图像':<10} {'影调':<15} {'平均':<8} {'标准差':<8}")
     print("-" * 45)
 
     for name, img in images.items():
@@ -83,45 +83,45 @@ def example_3_batch_analysis():
 
 
 def example_4_visualize_histogram():
-    """Example 4: Visualize histogram (requires matplotlib)."""
+    """示例4：可视化直方图（需要matplotlib）。"""
     print("\n" + "=" * 50)
-    print("Example 4: Histogram Visualization")
+    print("示例4：直方图可视化")
     print("=" * 50)
 
     try:
         import matplotlib.pyplot as plt
     except ImportError:
-        print("matplotlib not installed. Skipping visualization.")
-        print("Install with: pip install matplotlib")
+        print("未安装matplotlib。跳过可视化。")
+        print("安装命令: pip install matplotlib")
         return
 
-    # Create a sample image with gradient
+    # 创建渐变示例图像
     gradient = np.linspace(0, 255, 256).reshape(1, 256, 1).repeat(100, axis=0).repeat(3, axis=2)
     gradient = gradient.astype(np.uint8)
 
     analyzer = ToneAnalyzer()
     result = analyzer.analyze(gradient)
 
-    # Plot
+    # 绘图
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
-    # Image
+    # 图像
     ax1.imshow(gradient)
-    ax1.set_title("Sample Image")
+    ax1.set_title("示例图像")
     ax1.axis('off')
 
-    # Histogram
+    # 直方图
     ax2.bar(range(256), result.histogram, width=1, color='gray', alpha=0.7)
-    ax2.axvline(result.mean, color='red', linestyle='--', label=f'Mean: {result.mean:.1f}')
-    ax2.axvline(result.peak_position, color='blue', linestyle='--', label=f'Peak: {result.peak_position:.1f}')
-    ax2.set_xlabel('Brightness')
-    ax2.set_ylabel('Pixel Count')
-    ax2.set_title(f"Histogram - {get_tone_name(result.tone_key, result.tone_range)}")
+    ax2.axvline(result.mean, color='red', linestyle='--', label=f'平均值: {result.mean:.1f}')
+    ax2.axvline(result.peak_position, color='blue', linestyle='--', label=f'峰值: {result.peak_position:.1f}')
+    ax2.set_xlabel('亮度')
+    ax2.set_ylabel('像素数量')
+    ax2.set_title(f"直方图 - {get_tone_name(result.tone_key, result.tone_range)}")
     ax2.legend()
 
     plt.tight_layout()
     plt.savefig('histogram_example.png')
-    print("Histogram saved to: histogram_example.png")
+    print("直方图已保存至: histogram_example.png")
 
 
 if __name__ == "__main__":
