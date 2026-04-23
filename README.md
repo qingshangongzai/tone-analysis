@@ -132,7 +132,7 @@ result = analyzer.analyze(image_array)
 
 GitHub: [@qingshangongzai](https://github.com/qingshangongzai)
 
-代码：trae
+代码：trae、Kimi
 
 ## 许可证
 
@@ -274,7 +274,7 @@ Dataclass containing analysis results:
 
 GitHub: [@qingshangongzai](https://github.com/qingshangongzai)
 
-Code: trae
+Code: trae、Kimi
 
 ## License
 
