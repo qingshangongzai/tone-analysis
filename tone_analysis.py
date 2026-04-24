@@ -262,10 +262,25 @@ class ToneAnalyzer:
         return ToneRange.MEDIUM, confidence
 
     def _rgb_to_gray(self, image: np.ndarray) -> np.ndarray:
-        """使用Rec. 709标准将RGB转换为灰度图。"""
-        return (0.299 * image[:, :, 0] +
-                0.587 * image[:, :, 1] +
-                0.114 * image[:, :, 2]).astype(np.uint8)
+        """RGB 转灰度 (Rec. 709 标准 + sRGB Gamma 校正)"""
+        # 归一化到 0-1
+        rgb = image.astype(np.float32) / 255.0
+
+        # sRGB Gamma 校正到线性空间
+        linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+
+        # Rec. 709 系数计算线性亮度
+        luminance_linear = 0.2126 * linear[:, :, 0] + 0.7152 * linear[:, :, 1] + 0.0722 * linear[:, :, 2]
+
+        # 从线性空间转回 sRGB
+        luminance = np.where(
+            luminance_linear <= 0.0031308,
+            luminance_linear * 12.92,
+            1.055 * (luminance_linear ** (1.0 / 2.4)) - 0.055
+        )
+
+        # 转换到 0-255 并四舍五入
+        return np.clip(np.round(luminance * 255), 0, 255).astype(np.uint8)
 
 
 def get_tone_name(key: ToneKey, range_type: ToneRange) -> str:
