@@ -67,10 +67,6 @@ class ToneAnalyzer:
     KEY_HIGH_MIN = 160
     KEY_LOW_MAX = 96
 
-    # 反差分类阈值
-    RANGE_LONG = 180
-    RANGE_MEDIUM = 100
-
     # 全调检测阈值
     MIN_ZONE_PERCENTAGE = 15
     MIN_RANGE_THRESHOLD = 30
@@ -79,7 +75,6 @@ class ToneAnalyzer:
 
     # 边界缓冲值（用于置信度计算）
     KEY_BUFFER = 15  # 调性分类边界缓冲
-    RANGE_BUFFER = 20  # 反差分类边界缓冲
 
     def analyze(self, image: np.ndarray) -> ToneAnalysisResult:
         """
@@ -110,7 +105,7 @@ class ToneAnalyzer:
         peak_position = self._calc_peak_position(hist)
 
         tone_key, tone_range, key_confidence, range_confidence = self._classify_tone(
-            peak_position, min_val, max_val, shadows, highlights, hist
+            peak_position, min_val, max_val, shadows, midtones, highlights, hist
         )
 
         return ToneAnalysisResult(
@@ -131,7 +126,7 @@ class ToneAnalyzer:
         return float(np.argmax(hist))
 
     def _classify_tone(self, peak: float, min_val: int, max_val: int,
-                       shadows: float, highlights: float,
+                       shadows: float, midtones: float, highlights: float,
                        hist: np.ndarray) -> Tuple[ToneKey, ToneRange, float, float]:
         """
         基于直方图特征进行影调分类。
@@ -142,8 +137,6 @@ class ToneAnalyzer:
         返回:
             元组 (tone_key, tone_range, key_confidence, range_confidence)
         """
-        spread = max_val - min_val
-
         # 检测全调（U型分布）
         if self._is_full_tone(hist, shadows, highlights, min_val, max_val):
             return ToneKey.FULL, ToneRange.LONG, 1.0, 1.0
@@ -151,8 +144,10 @@ class ToneAnalyzer:
         # 根据峰值位置分类（含置信度）
         tone_key, key_confidence = self._get_tone_key(peak)
 
-        # 根据分布范围分类（含置信度）
-        tone_range, range_confidence = self._get_tone_range(spread)
+        # 根据区域分布占比分类（含置信度）
+        tone_range, range_confidence = self._get_tone_range_by_distribution(
+            shadows, midtones, highlights
+        )
 
         return tone_key, tone_range, key_confidence, range_confidence
 
@@ -213,40 +208,56 @@ class ToneAnalyzer:
 
         return ToneKey.MID, confidence
 
-    def _get_tone_range(self, spread: int) -> Tuple[ToneRange, float]:
-        """根据亮度分布范围确定影调反差，并返回置信度。
+    def _get_tone_range_by_distribution(
+        self, shadows: float, midtones: float, highlights: float
+    ) -> Tuple[ToneRange, float]:
+        """根据区域分布占比确定跨度及置信度
+
+        基于影调分类的核心原则：
+        - 长调：暗部、中间调、亮部都有明显分布（从黑到白都有）
+        - 中调：缺失一端（只有两段有明显分布）
+        - 短调：集中在窄范围内（只有一段占绝对主导）
 
         参数:
-            spread: 亮度分布范围 (最大值 - 最小值)
+            shadows: 暗部占比 (%)
+            midtones: 中间调占比 (%)
+            highlights: 亮部占比 (%)
 
         返回:
             元组 (tone_range, confidence)，置信度范围为0.5-1.0
         """
-        # 长调区域
-        if spread >= self.RANGE_LONG:
-            distance = spread - self.RANGE_LONG
-            confidence = 0.5 + 0.5 * min(distance / self.RANGE_BUFFER, 1.0)
+        # 定义"明显分布"的阈值
+        SIGNIFICANT_THRESHOLD = 0.5  # 占比超过0.5%认为有明显分布（仅过滤极端噪声）
+
+        # 计算有多少个区域有明显分布
+        significant_zones = 0
+        if shadows >= SIGNIFICANT_THRESHOLD:
+            significant_zones += 1
+        if midtones >= SIGNIFICANT_THRESHOLD:
+            significant_zones += 1
+        if highlights >= SIGNIFICANT_THRESHOLD:
+            significant_zones += 1
+
+        # 长调：三个区域都有明显分布
+        if significant_zones >= 3:
+            # 置信度基于最小区域的占比
+            min_ratio = min(shadows, midtones, highlights)
+            confidence = min(1.0, 0.5 + min_ratio / 10.0)
             return ToneRange.LONG, confidence
 
-        # 短调区域
-        if spread < self.RANGE_MEDIUM:
-            distance = self.RANGE_MEDIUM - spread
-            confidence = 0.5 + 0.5 * min(distance / self.RANGE_BUFFER, 1.0)
+        # 短调：只有一个区域有明显分布（集中度极高）
+        if significant_zones == 1:
+            max_ratio = max(shadows, midtones, highlights)
+            confidence = min(1.0, 0.5 + (max_ratio - 80.0) / 30.0)
             return ToneRange.SHORT, confidence
 
-        # 中调区域
-        dist_to_short = spread - self.RANGE_MEDIUM
-        dist_to_long = self.RANGE_LONG - spread
-
-        if dist_to_short < self.RANGE_BUFFER and dist_to_short < dist_to_long:
-            # 接近短调边界
-            confidence = 0.5 + 0.5 * (dist_to_short / self.RANGE_BUFFER)
-        elif dist_to_long < self.RANGE_BUFFER:
-            # 接近长调边界
-            confidence = 0.5 + 0.5 * (dist_to_long / self.RANGE_BUFFER)
+        # 中调：两个区域有明显分布
+        ratios = [r for r in [shadows, midtones, highlights] if r >= SIGNIFICANT_THRESHOLD]
+        if len(ratios) == 2:
+            # 置信度基于两个区域的均衡程度
+            confidence = min(1.0, 0.5 + min(ratios) / max(ratios))
         else:
-            # 核心中调区域
-            confidence = 1.0
+            confidence = 0.7
 
         return ToneRange.MEDIUM, confidence
 
