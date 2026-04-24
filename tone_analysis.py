@@ -63,9 +63,9 @@ class ToneAnalyzer:
     2. 分布范围：决定反差（长调/中调/短调）
     """
 
-    # 调性分类阈值
-    KEY_HIGH_MIN = 160
-    KEY_LOW_MAX = 96
+    # 调性分类阈值（与分区一致：暗部0-85，中间调86-170，亮部171-255）
+    KEY_HIGH_MIN = 171  # 亮部起始
+    KEY_LOW_MAX = 85    # 暗部结束
 
     # 全调检测阈值
     MIN_ZONE_PERCENTAGE = 15
@@ -97,9 +97,9 @@ class ToneAnalyzer:
         min_val = int(np.min(gray))
         max_val = int(np.max(gray))
 
-        shadows = float(np.sum(gray < 64) / gray.size * 100)
-        midtones = float(np.sum((gray >= 64) & (gray < 192)) / gray.size * 100)
-        highlights = float(np.sum(gray >= 192) / gray.size * 100)
+        shadows = float(np.sum(gray <= 85) / gray.size * 100)
+        midtones = float(np.sum((gray >= 86) & (gray <= 170)) / gray.size * 100)
+        highlights = float(np.sum(gray >= 171) / gray.size * 100)
 
         hist, _ = np.histogram(gray, bins=256, range=(0, 256))
         peak_position = self._calc_peak_position(hist)
@@ -226,9 +226,9 @@ class ToneAnalyzer:
         if not (has_shadows and has_highlights and full_range):
             return False, 0.0
 
-        # U型分布判断
-        mid_avg = np.mean(hist[64:192])
-        edge_avg = np.mean(np.concatenate([hist[:32], hist[224:]]))
+        # U型分布判断（基于新分区：暗部0-85，中间调86-170，亮部171-255）
+        mid_avg = np.mean(hist[86:171])
+        edge_avg = np.mean(np.concatenate([hist[:43], hist[213:]]))
 
         if mid_avg >= edge_avg * self.U_SHAPE_RATIO:
             return False, 0.0
@@ -331,9 +331,9 @@ class ToneAnalyzer:
             significant_zones += 1
 
         # 计算各区域的分布连续性
-        shadow_continuity = self._calc_distribution_continuity(hist, 0, 64)
-        midtone_continuity = self._calc_distribution_continuity(hist, 64, 192)
-        highlight_continuity = self._calc_distribution_continuity(hist, 192, 256)
+        shadow_continuity = self._calc_distribution_continuity(hist, 0, 86)
+        midtone_continuity = self._calc_distribution_continuity(hist, 86, 171)
+        highlight_continuity = self._calc_distribution_continuity(hist, 171, 256)
 
         # 长调：三个区域都有明显分布
         if significant_zones >= 3:
